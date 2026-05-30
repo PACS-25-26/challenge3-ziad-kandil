@@ -87,7 +87,7 @@ void IO:: write_vtk(
 
     out << "SPACING " << grid.h << " " << grid.h << " 1\n";
 
-    out << "POINT DATA " << grid.global_n * grid.global_n << "\n";
+    out << "POINT_DATA " << grid.global_n * grid.global_n << "\n";
 
     out << "SCALARS solution double\n";
 

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cmath>
 
+
 int main(int argc, char** argv){
 
     MPI_Init(&argc, &argv);
@@ -26,10 +27,21 @@ int main(int argc, char** argv){
     int local_rows;
     int start_row;
 
+    auto forcing_term = [](double x, double y){
+        return 8.0 * M_PI * M_PI * 
+                std::sin(2.0 * M_PI * x) * 
+                std::sin(2.0 * M_PI * y);
+    };
+
+    auto exact_solution = [](double x, double y){
+        return std::sin(2.0 * M_PI * x) * 
+                std::sin(2.0 * M_PI * y);
+    };
+
     Utils::compute_partitions(n, size, rank, local_rows, start_row);
     Grid grid(n, local_rows, start_row);
 
-    Solver::initialize(grid);
+    Solver::initialize(grid, forcing_term);
 
     double global_error = 1.0;
     int iter = 0;
@@ -61,7 +73,8 @@ int main(int argc, char** argv){
 
     double local_l2_error = Solver::compute_local_l2_error(
         grid,
-        grid.u_old
+        grid.u_old,
+        exact_solution
     );
 
     double global_l2_error;

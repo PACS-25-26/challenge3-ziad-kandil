@@ -1,35 +1,15 @@
 #include "Solver.hpp"
 
-#include <cmath>
-#include <numbers>
 #include <omp.h>
 
 constexpr double pi = std::numbers::pi_v<double>;
 
 /**
- * @brief Computes the exact solution of the problem at the given coordinates (x, y).
- * @param x The x-coordinate for which to compute the exact solution.
- * @param y The y-coordinate for which to compute the exact solution.
- * @return The computed exact solution as a double value.
- */
-double Solver::exact_solution(double x, double y){
-    return sin(2.0 * pi * x) * sin(2.0 * pi * y);
-}
-
-/**
- * @brief Computes the forcing term of the problem at the given coordinates (x, y).
- * @param x The x-coordinate for which to compute the forcing term.
- * @param y The y-coordinate for which to compute the forcing term.
- * @return The computed forcing term as a double value.
- */
-double Solver::forcing_term(double x, double y){
-    return 8.0 * pi * pi * sin(2.0 * pi * x) * sin(2.0 * pi * y);
-}
-
-/**
  * @brief Initializes the grid with the given values.
+ * @param grid The local grid structure 
+ * @param f The forcing function (right-hand side)
  */
-void Solver::initialize(Grid& grid){
+void Solver::initialize(Grid& grid, std::function<double(double, double)> f){
 
     for(int i = 1; i <= grid.local_rows; ++i){
 
@@ -38,7 +18,7 @@ void Solver::initialize(Grid& grid){
             double x_coord = grid.x(j);
             double y_coord = grid.y(i);
 
-            grid.rhs[grid.idx(i,j)] = forcing_term(x_coord, y_coord);
+            grid.rhs[grid.idx(i,j)] = f(x_coord, y_coord);
         }
     }
 }
@@ -92,10 +72,12 @@ double Solver::compute_local_error(const Grid& grid){
 
 /**
  * @brief Computes the local L2 error of the current grid values compared to the exact solution.
- * Each rank will return its local sum, and the global sum will be computed in the main function using MPI_Reduce
+ * @param grid The local grid structure
+ * @param solution The current solution vector to compare against the exact solution
+ * @param exact_sol A function that computes the exact solution at given coordinates (x, y)
  * @return The computed local L2 error as a double value.
  */
-double Solver::compute_local_l2_error(const Grid& grid, const std::vector<double>& solution){
+double Solver::compute_local_l2_error(const Grid& grid, const std::vector<double>& solution, std::function<double(double, double)> exact_sol){
 
     double local_sum = 0.0;
 
@@ -108,7 +90,7 @@ double Solver::compute_local_l2_error(const Grid& grid, const std::vector<double
             double x_coord = grid.x(j);
             double y_coord = grid.y(i);
 
-            double exact = exact_solution(x_coord, y_coord);
+            double exact = exact_sol(x_coord, y_coord);
             double diff = solution[grid.idx(i,j)] - exact;
             local_sum += diff * diff;
         }

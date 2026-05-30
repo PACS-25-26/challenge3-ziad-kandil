@@ -1,5 +1,7 @@
 #include "Utils.hpp"
 
+#include <algorithm>
+
 /**
  * @brief Function to compute the local number of rows and the starting
  *  row index for each process

@@ -1,6 +1,9 @@
 #include "Grid.hpp"
 
 #include <cmath>
+#include <numbers>
+
+constexpr double pi = std::numbers::pi_v<double>;
 
 
 /**
@@ -56,9 +59,9 @@ void Grid::initialize(){
             double x_coord = x(j);
             double y_coord = y(i);
 
-            rhs[idx(i, j)] = 8.0 * M_PI * M_PI * 
-                            std::sin(2.0 * M_PI * x_coord) * 
-                            std::sin(2.0 * M_PI * y_coord); 
+            rhs[idx(i, j)] = 8.0 * pi * pi * 
+                            sin(2.0 * pi * x_coord) * 
+                            sin(2.0 * pi * y_coord); 
         }
     }
 }

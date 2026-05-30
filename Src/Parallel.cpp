@@ -27,11 +27,11 @@ void Parallel::exchange_ghost_rows(Grid& grid, int rank, int size){
             up,
             0,
 
-            $grid.u_old[grid.idx(0, 0)],
+            &grid.u_old[grid.idx(0, 0)],
             grid.ny,
             MPI_DOUBLE,
             up,
-            0,
+            1,
 
             MPI_COMM_WORLD,
             MPI_STATUS_IGNORE
@@ -54,7 +54,7 @@ void Parallel::exchange_ghost_rows(Grid& grid, int rank, int size){
             grid.ny,
             MPI_DOUBLE,
             down,
-            1,
+            0,
 
             MPI_COMM_WORLD,
             MPI_STATUS_IGNORE

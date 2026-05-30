@@ -54,7 +54,7 @@ void Grid::initialize(){
 
     for(int i = 1; i <= local_rows; ++i){
 
-        for(int j = 0; j < ny, ++j){
+        for(int j = 0; j < ny; ++j){
 
             double x_coord = x(j);
             double y_coord = y(i);

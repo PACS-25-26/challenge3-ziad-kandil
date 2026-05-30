@@ -21,7 +21,7 @@ class IO{
         const std::string& filename,
         int rank,
         int size
-    )
-}
+    );
+};
 
 #endif

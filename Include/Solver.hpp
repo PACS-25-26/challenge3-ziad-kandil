@@ -44,7 +44,7 @@ class Solver{
      * @return The computed local L2 error as a double value.
      */
     static double compute_local_l2_error(const Grid& grid, const std::vector<double>& solution);
-}
+};
 
 
 #endif

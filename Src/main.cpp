@@ -5,19 +5,21 @@
 #include "IO.hpp"
 
 #include <mpi.h>
+#include <omp.h>
 #include <iostream>
 #include <cmath>
 
-int main(int argc, char** argv[]){
+int main(int argc, char** argv){
 
-    MPI_init(&argc, &argv);
+    MPI_Init(&argc, &argv);
+    
+    omp_set_num_threads(2);
 
     int rank, size;
-
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int n = 128;
+    int n = 64;
     int max_iters = 10000;
     double tol = 1e-6;
 
@@ -25,20 +27,18 @@ int main(int argc, char** argv[]){
     int start_row;
 
     Utils::compute_partitions(n, size, rank, local_rows, start_row);
-
     Grid grid(n, local_rows, start_row);
 
     Solver::initialize(grid);
 
     double global_error = 1.0;
-
     int iter = 0;
 
     while(global_error > tol && iter < max_iters){
 
         Parallel::exchange_ghost_rows(grid, rank, size);
 
-        Solver::jacobian_step(grid);
+        Solver::jacobi_step(grid);
 
         double local_error = Solver::compute_local_error(grid);
 
@@ -49,7 +49,7 @@ int main(int argc, char** argv[]){
             MPI_DOUBLE,
             MPI_SUM,
             MPI_COMM_WORLD
-        )
+        );
 
         global_error = std::sqrt(grid.h * global_error);
 
@@ -58,13 +58,13 @@ int main(int argc, char** argv[]){
         ++iter;
     }
 
+
     double local_l2_error = Solver::compute_local_l2_error(
         grid,
         grid.u_old
     );
 
     double global_l2_error;
-
     MPI_Allreduce(
         &local_l2_error,
         &global_l2_error,
@@ -72,7 +72,7 @@ int main(int argc, char** argv[]){
         MPI_DOUBLE,
         MPI_SUM,
         MPI_COMM_WORLD
-    )
+    );
 
     global_l2_error = std::sqrt(grid.h * global_l2_error);
 
@@ -84,7 +84,6 @@ int main(int argc, char** argv[]){
     IO::write_vtk(grid, "solution.vtk", rank, size);
 
     MPI_Finalize();
-
     return 0;
 
 }

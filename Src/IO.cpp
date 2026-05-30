@@ -19,8 +19,8 @@ void IO:: write_vtk(
 ){
     int local_size = grid.local_rows * grid.ny; /// < Number of points in the local grid (excluding ghost cells)
 
-    std::vector<double> recv_counts;            /// < Number of elements to receive from each process
-    std::vector<double> displs;                 /// < Displacements for MPI_Gatherv
+    std::vector<int> recv_counts;            /// < Number of elements to receive from each process
+    std::vector<int> displs;                 /// < Displacements for MPI_Gatherv
 
     if(rank == 0){
 
@@ -55,7 +55,7 @@ void IO:: write_vtk(
     }
 
     MPI_Gatherv(
-        &grid.u_old[grid_idx(1,0)],
+        &grid.u_old[grid.idx(1,0)],
         local_size,
         MPI_DOUBLE,
 
@@ -65,7 +65,7 @@ void IO:: write_vtk(
         MPI_DOUBLE,
         0,
         MPI_COMM_WORLD
-    )
+    );
 
     if (rank != 0){
         return;         /// < Only the root process will write the output file
@@ -79,7 +79,7 @@ void IO:: write_vtk(
     
     out << "ASCII\n";
 
-    out << "DATASET STRUCTURED_POINTS\n"
+    out << "DATASET STRUCTURED_POINTS\n";
 
     out << "DIMENSIONS " << grid.global_n << " " << grid.global_n << " 1\n";
 
@@ -87,13 +87,13 @@ void IO:: write_vtk(
 
     out << "SPACING " << grid.h << " " << grid.h << " 1\n";
 
-    out << "POINT DATA " << grid.global_n * grid.global_n << "\n"
+    out << "POINT DATA " << grid.global_n * grid.global_n << "\n";
 
     out << "SCALARS solution double\n";
 
     out << "LOOKUP_TABLE default\n";
 
-    for(double v: global_solutions){
+    for(double v: global_solution){
 
         out << v << "\n";
     }

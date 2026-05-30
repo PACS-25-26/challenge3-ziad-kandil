@@ -17,6 +17,6 @@ class Parallel{
      */
     static void exchange_ghost_rows(Grid& grid, int rank, int size);
 
-}
+};
 
 #endif

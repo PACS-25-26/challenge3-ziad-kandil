@@ -20,7 +20,7 @@ class Utils{
         int rank,
         int& local_rows,
         int& start_row
-    )
-}
+    );
+};
 
 #endif

@@ -52,6 +52,6 @@ struct Grid{
      * @return The y coordinate of the grid point
      */
     double y(int i) const;
-}
+};
 
 #endif

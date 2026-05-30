@@ -54,7 +54,7 @@ void Solver::jacobi_step(Grid& grid){
 
         for(int i = 1; i <= grid.local_rows; ++i){
 
-            for (int j = 1; j < grid.ny; ++j){
+            for (int j = 1; j < grid.ny - 1; ++j){
 
                 grid.u_new[grid.idx(i,j)] = 0.25 * (
                     grid.u_old[grid.idx(i-1, j)] +
@@ -99,7 +99,7 @@ double Solver::compute_local_l2_error(const Grid& grid, const std::vector<double
 
     double local_sum = 0.0;
 
-    #pragma omp paraller for reduction (+: local_sum)
+    #pragma omp parallel for reduction (+: local_sum)
 
     for(int i = 1; i <= grid.local_rows; ++i){
 

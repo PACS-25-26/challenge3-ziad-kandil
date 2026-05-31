@@ -1,6 +1,7 @@
 #include "Solver.hpp"
 
 #include <omp.h>
+#include <cmath>
 
 constexpr double pi = std::numbers::pi_v<double>;
 
@@ -49,7 +50,6 @@ void Solver::jacobi_step(Grid& grid){
 
 /**
  * @brief Computes the local error of the current grid values compared to the previous iteration.
- * Each rank will return its local sum, and the global sum will be computed in the main function using MPI_Reduce
  * @return The computed local error as a double value.
  */
 double Solver::compute_local_error(const Grid& grid){
@@ -67,7 +67,7 @@ double Solver::compute_local_error(const Grid& grid){
         }
     }
 
-    return local_sum;
+    return std::sqrt(local_sum * grid.h);
 }
 
 /**

@@ -43,10 +43,10 @@ int main(int argc, char** argv){
 
     Solver::initialize(grid, forcing_term);
 
-    double global_error = 1.0;
+    bool converged = false;
     int iter = 0;
 
-    while(global_error > tol && iter < max_iters){
+    while(!converged && iter < max_iters){
 
         Parallel::exchange_ghost_rows(grid, rank, size);
 
@@ -54,16 +54,21 @@ int main(int argc, char** argv){
 
         double local_error = Solver::compute_local_error(grid);
 
+        bool local_converged = (local_error < tol);
+
+        int local_flag = local_converged ? 1 : 0;
+        int global_flag = 0;
+
         MPI_Allreduce(
-            &local_error,
-            &global_error,
+            &local_flag,
+            &global_flag,
             1,
-            MPI_DOUBLE,
-            MPI_SUM,
+            MPI_INT,
+            MPI_MIN,
             MPI_COMM_WORLD
         );
 
-        global_error = std::sqrt(grid.h * global_error);
+        converged = (global_flag == 1);
 
         std::swap(grid.u_old, grid.u_new);
 
@@ -78,6 +83,7 @@ int main(int argc, char** argv){
     );
 
     double global_l2_error;
+
     MPI_Allreduce(
         &local_l2_error,
         &global_l2_error,
@@ -95,6 +101,8 @@ int main(int argc, char** argv){
     }
 
     IO::write_vtk(grid, "solution.vtk", rank, size);
+    IO::write_text(grid, "solution.txt", rank, size);
+    IO::write_csv(grid, "solution.csv", rank, size);
 
     MPI_Finalize();
     return 0;

@@ -14,5 +14,7 @@ $(TARGET): $(SRC)
 clean:
 	rm -f $(TARGET)
 
+NPROCS ?= 4
+
 run: 
-	mpirun -np 2 ./$(TARGET)
+	mpirun -np $(NPROCS) ./$(TARGET)

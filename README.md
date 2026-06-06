@@ -15,9 +15,9 @@ A high-performance C++ implementation of a 2D Laplace equation solver featuring:
 
 This project solves the 2D Laplace equation
 
-\[
+$$
 -\nabla^2 u = f(x,y)
-\]
+$$
 
 on a square domain with homogeneous Dirichlet boundary conditions.
 

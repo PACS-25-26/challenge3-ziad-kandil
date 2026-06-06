@@ -318,3 +318,103 @@ void IO::write_csv(
     }
 
 }
+
+/**
+ * @brief Function to write the grid values to a VTK file for visualization in serial.
+ * @param grid The local grid structure containing the solution vectors and grid parameters.
+ * @param filename The name for the output VTK file.
+ */
+void IO::write_vtk_serial(
+    const Grid& grid,
+    const std::string& filename
+){
+
+    std::filesystem::create_directories("Outputs");
+    std::filesystem::path out_path = std::filesystem::path("Outputs") / filename;
+    std::ofstream out(out_path.string());
+
+    out << "# vtk DataFile Version 3.0\n";
+
+    out << "Laplace Solution\n";
+    
+    out << "ASCII\n";
+
+    out << "DATASET STRUCTURED_POINTS\n";
+
+    out << "DIMENSIONS " << grid.global_n << " " << grid.global_n << " 1\n";
+
+    out << "ORIGIN 0 0 0\n";
+
+    out << "SPACING " << grid.h << " " << grid.h << " 1\n";
+
+    out << "POINT_DATA " << grid.global_n * grid.global_n << "\n";
+
+    out << "SCALARS solution double\n";
+
+    out << "LOOKUP_TABLE default\n";
+
+    for(double v: grid.u_old){
+
+        out << v << "\n";
+    }
+}
+
+/**
+ * @brief Function to write the solution and grid coordinates to a text file in serial.
+ * @param grid The local grid structure containing the solution vectors and grid parameters.
+ * @param filename The name for the output text file.
+ */
+void IO::write_text_serial(
+    const Grid& grid,
+    const std::string& filename
+){
+    std::filesystem::create_directories("Outputs");
+    std::filesystem::path out_path = std::filesystem::path("Outputs") / filename;
+    std::ofstream out(out_path.string());
+
+    out << "x y solution\n";
+    
+    for(int i = 0; i < grid.global_n; ++i){
+
+        for(int j = 0; j < grid.ny; ++j){
+
+            double x_coord = grid.x(j);
+            double y_coord = grid.y(i);
+
+            out << x_coord << " "
+                << y_coord << " "
+                << grid.u_old[grid.idx(i,j)] << "\n";
+
+        }
+    }
+}
+
+/**
+ * @brief Function to write the solution and grid coordinates to a csv file in serial.
+ * @param grid The local grid structure containing the solution vectors and grid parameters.
+ * @param filename The name for the output csv file.
+ */
+void IO::write_csv_serial(
+    const Grid& grid,
+    const std::string& filename
+){
+    std::filesystem::create_directories("Outputs");
+    std::filesystem::path out_path = std::filesystem::path("Outputs") / filename;
+    std::ofstream out(out_path.string());
+
+    out << "x, y, solution\n";
+
+    for(int i = 0; i < grid.global_n; ++i){
+
+        for(int j = 0; j < grid.ny; ++j){
+
+            double x_coord = grid.x(j);
+            double y_coord = grid.y(i);
+
+            out << x_coord << ","
+                << y_coord << ","
+                << grid.u_old[grid.idx(i,j)] << "\n";
+
+        }
+    }
+}

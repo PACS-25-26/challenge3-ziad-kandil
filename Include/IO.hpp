@@ -51,6 +51,36 @@ class IO{
         int rank,
         int size
     );
+
+    /**
+     * @brief Function to write the grid values to a VTK file for visualization in serial.
+     * @param grid The local grid structure containing the solution vectors and grid parameters.
+     * @param filename The name for the output VTK file.
+     */
+    static void write_vtk_serial(
+        const Grid& grid,
+        const std::string& filename
+    );
+
+    /**
+     * @brief Function to write the solution and grid coordinates to a text file in serial.
+     * @param grid The local grid structure containing the solution vectors and grid parameters.
+     * @param filename The name for the output text file.
+     */
+    static void write_text_serial(
+        const Grid& grid,
+        const std::string& filename
+    );
+
+    /**
+     * @brief Function to write the solution and grid coordinates to a csv file in serial.
+     * @param grid The local grid structure containing the solution vectors and grid parameters.
+     * @param filename The name for the output csv file.
+     */
+    static void write_csv_serial(
+        const Grid& grid,
+        const std::string& filename
+    );
 };
 
 #endif

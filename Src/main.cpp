@@ -1,6 +1,6 @@
 #include "Grid.hpp"
-#include "Solver.hpp"
-#include "Parallel.hpp"
+#include "Parallel_Solver.hpp"
+#include "Serial_Solver.hpp"
 #include "Utils.hpp"
 #include "IO.hpp"
 
@@ -13,19 +13,10 @@
 int main(int argc, char** argv){
 
     MPI_Init(&argc, &argv);
-    
-    omp_set_num_threads(2);
 
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    int n = 64;
-    int max_iters = 10000;
-    double tol = 1e-6;
-
-    int local_rows;
-    int start_row;
 
     auto forcing_term = [](double x, double y){
         return 8.0 * M_PI * M_PI * 
@@ -38,73 +29,79 @@ int main(int argc, char** argv){
                 std::sin(2.0 * M_PI * y);
     };
 
-    Utils::compute_partitions(n, size, rank, local_rows, start_row);
-    Grid grid(n, local_rows, start_row);
+    std::vector<int> grid_sizes = {16, 32, 64, 128, 256};
+    int max_iters = 50000;
+    double tol = 1e-9;
 
-    Solver::initialize(grid, forcing_term);
+    int n_threads = 2;
+    omp_set_num_threads(n_threads);
 
-    bool converged = false;
-    int iter = 0;
+    int local_rows;
+    int start_row;
 
-    while(!converged && iter < max_iters){
+    std::vector<double> Parallel_timings;
+    std::vector<double> Serial_timings;
+    std::vector<double> Parallel_l2_errors;
+    std::vector<double> Serial_l2_errors;
 
-        Parallel::exchange_ghost_rows(grid, rank, size);
+    Parallel_timings.reserve(grid_sizes.size());
+    Serial_timings.reserve(grid_sizes.size());
+    Parallel_l2_errors.reserve(grid_sizes.size());
+    Serial_l2_errors.reserve(grid_sizes.size());
 
-        Solver::jacobi_step(grid);
+    for (int n : grid_sizes){
 
-        double local_error = Solver::compute_local_error(grid);
+        Utils::compute_partitions(n, size, rank, local_rows, start_row);
 
-        bool local_converged = (local_error < tol);
+        Grid Parallel_grid(n, local_rows, start_row);
 
-        int local_flag = local_converged ? 1 : 0;
-        int global_flag = 0;
+        double Parallel_l2_error = 0.0;
 
-        MPI_Allreduce(
-            &local_flag,
-            &global_flag,
-            1,
-            MPI_INT,
-            MPI_MIN,
-            MPI_COMM_WORLD
-        );
+        double start_time = MPI_Wtime();
 
-        converged = (global_flag == 1);
+        Parallel_Solver::Solve_Parallel(Parallel_grid, rank, size, tol, max_iters, Parallel_l2_error, forcing_term, exact_solution);
 
-        std::swap(grid.u_old, grid.u_new);
+        double end_time = MPI_Wtime();
+        double Parallel_time = end_time - start_time;
 
-        ++iter;
+        Parallel_timings.push_back(Parallel_time);
+        Parallel_l2_errors.push_back(Parallel_l2_error);
+
+        std::string vtk_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".vtk";
+        std::string text_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".txt";
+        std::string csv_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".csv";
+
+        IO::write_vtk(Parallel_grid, vtk_output_filename, rank, size);
+        IO::write_text(Parallel_grid, text_output_filename, rank, size);
+        IO::write_csv(Parallel_grid, csv_output_filename, rank, size);
+
+        if (rank ==0){
+
+            Grid Serial_grid(n, n, 0);
+
+            double Serial_l2_error = 0.0;
+
+            double Serial_start_time = MPI_Wtime();
+
+            Serial_Solver::Solve_Serial(Serial_grid, tol, max_iters, Serial_l2_error, forcing_term, exact_solution);
+
+            double Serial_end_time = MPI_Wtime();
+            double Serial_time = Serial_end_time - Serial_start_time;
+
+            Serial_timings.push_back(Serial_time);
+            Serial_l2_errors.push_back(Serial_l2_error);
+
+            std::string serial_vtk_output_filename = "Serial_solution_" + std::to_string(Serial_grid.global_n) + ".vtk";
+            std::string serial_text_output_filename = "Serial_solution_" + std::to_string(Serial_grid.global_n) + ".txt";
+            std::string serial_csv_output_filename = "Serial_solution_" + std::to_string(Serial_grid.global_n) + ".csv";
+            IO::write_vtk_serial(Serial_grid, serial_vtk_output_filename);
+            IO::write_text_serial(Serial_grid, serial_text_output_filename);
+            IO::write_csv_serial(Serial_grid, serial_csv_output_filename);
+        }
+
     }
-
-
-    double local_l2_error = Solver::compute_local_l2_error(
-        grid,
-        grid.u_old,
-        exact_solution
-    );
-
-    double global_l2_error;
-
-    MPI_Allreduce(
-        &local_l2_error,
-        &global_l2_error,
-        1,
-        MPI_DOUBLE,
-        MPI_SUM,
-        MPI_COMM_WORLD
-    );
-
-    global_l2_error = std::sqrt(grid.h * global_l2_error);
-
-    if(rank == 0){
-        std::cout << "Converged in " 
-            << iter << " iterations with L2 error: " << global_l2_error << std::endl;
-    }
-
-    IO::write_vtk(grid, "solution.vtk", rank, size);
-    IO::write_text(grid, "solution.txt", rank, size);
-    IO::write_csv(grid, "solution.csv", rank, size);
 
     MPI_Finalize();
-    return 0;
 
+    return 0;
 }

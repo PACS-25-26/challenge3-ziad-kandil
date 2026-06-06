@@ -33,7 +33,8 @@ int main(int argc, char** argv){
     int max_iters = 50000;
     double tol = 1e-9;
 
-    int n_threads = 2;
+    const char* env_threads = std::getenv("OMP_NUM_THREADS");
+    int n_threads = env_threads ? std::stoi(env_threads) : 2;
     omp_set_num_threads(n_threads);
 
     int local_rows;

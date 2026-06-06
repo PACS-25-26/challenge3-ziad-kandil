@@ -3,6 +3,7 @@
 #include "Serial_Solver.hpp"
 #include "Utils.hpp"
 #include "IO.hpp"
+#include "Schwarz_Solver.hpp"
 
 #include <mpi.h>
 #include <omp.h>
@@ -46,13 +47,17 @@ int main(int argc, char** argv){
 
     std::vector<double> Parallel_timings;
     std::vector<double> Serial_timings;
+    std::vector<double> Schwarz_timings;
     std::vector<double> Parallel_l2_errors;
     std::vector<double> Serial_l2_errors;
+    std::vector<double> Schwarz_l2_errors;
 
     Parallel_timings.reserve(grid_sizes.size());
     Serial_timings.reserve(grid_sizes.size());
+    Schwarz_timings.reserve(grid_sizes.size());
     Parallel_l2_errors.reserve(grid_sizes.size());
     Serial_l2_errors.reserve(grid_sizes.size());
+    Schwarz_l2_errors.reserve(grid_sizes.size());
 
     for (int n : grid_sizes){
 
@@ -69,16 +74,35 @@ int main(int argc, char** argv){
         double end_time = MPI_Wtime();
         double Parallel_time = end_time - start_time;
 
+        Grid Schwarz_grid(n, local_rows, start_row);
+
+        double schwarz_l2_error = 0.0;
+
+        double schwarz_start_time = MPI_Wtime();
+
+        Schwarz_Solver::Solve_Schwarz(Schwarz_grid, rank, size, tol, max_iters, schwarz_l2_error, forcing_term, exact_solution, BC_func);
+
+        double schwarz_end_time = MPI_Wtime();
+        double schwarz_time = schwarz_end_time - schwarz_start_time;
+
         Parallel_timings.push_back(Parallel_time);
         Parallel_l2_errors.push_back(Parallel_l2_error);
+        Schwarz_timings.push_back(schwarz_time);
+        Schwarz_l2_errors.push_back(schwarz_l2_error);
 
         std::string vtk_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".vtk";
         std::string text_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".txt";
         std::string csv_output_filename = "Parallel_solution_" + std::to_string(Parallel_grid.global_n) + ".csv";
+        std::string schwarz_vtk_output_filename = "Schwarz_solution_" + std::to_string(Parallel_grid.global_n) + ".vtk";
+        std::string schwarz_text_output_filename = "Schwarz_solution_" + std::to_string(Parallel_grid.global_n) + ".txt";
+        std::string schwarz_csv_output_filename = "Schwarz_solution_" + std::to_string(Parallel_grid.global_n) + ".csv";
 
         IO::write_vtk(Parallel_grid, vtk_output_filename, rank, size);
         IO::write_text(Parallel_grid, text_output_filename, rank, size);
         IO::write_csv(Parallel_grid, csv_output_filename, rank, size);
+        IO::write_vtk(Schwarz_grid, schwarz_vtk_output_filename, rank, size);
+        IO::write_text(Schwarz_grid, schwarz_text_output_filename, rank, size);
+        IO::write_csv(Schwarz_grid, schwarz_csv_output_filename, rank, size);
 
         if (rank ==0){
 
@@ -108,8 +132,8 @@ int main(int argc, char** argv){
 
     if(rank == 0){
 
-        IO::save_data(Parallel_timings, Serial_timings, grid_sizes, "timings.dat");
-        IO::save_data(Parallel_l2_errors, Serial_l2_errors, grid_sizes, "l2_errors.dat");
+        IO::save_data(Parallel_timings, Serial_timings, Schwarz_timings, grid_sizes, "timings.dat");
+        IO::save_data(Parallel_l2_errors, Serial_l2_errors, Schwarz_l2_errors, grid_sizes, "l2_errors.dat");
 
         std::string cmd_1 =
         "gnuplot -persist -e \""
@@ -119,7 +143,8 @@ int main(int argc, char** argv){
         "set grid;"
         "set key left top;"
         "plot 'Test/data/timings.dat' u 1:2 w lp title 'Parallel',"
-        "     'Test/data/timings.dat' u 1:3 w lp title 'Serial'"
+        "     'Test/data/timings.dat' u 1:3 w lp title 'Serial',"
+        "     'Test/data/timings.dat' u 1:4 w lp title 'Schwarz'"
         "\"";
 
         std::string cmd_2 =
@@ -129,7 +154,8 @@ int main(int argc, char** argv){
         "set xlabel 'Number of Grid Points n';"
         "set grid;"
         "plot 'Test/data/l2_errors.dat' u 1:2 w lp title 'Parallel',"
-        "     'Test/data/l2_errors.dat' u 1:3 w lp title 'Serial'"
+        "     'Test/data/l2_errors.dat' u 1:3 w lp title 'Serial',"
+        "     'Test/data/l2_errors.dat' u 1:4 w lp title 'Schwarz'"
         "\"";
 
         

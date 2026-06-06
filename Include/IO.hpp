@@ -87,11 +87,12 @@ class IO{
      * @brief Function to save data to a dat file for plotting.
      * @param data_Parallel The parallel data to be saved.
      * @param data_Serial The serial data to be saved.
+     * @param data_schwarz The Schwarz data to be saved.
      * @param grid_sizes The sizes of the grid.
      * @param filename The name for the output dat file.
      */
     static void save_data(const std::vector<double>& data_Parallel, const std::vector<double>& data_Serial,
-         const std::vector<int>& grid_sizes, const std::string& filename);
+         const std::vector<double>& data_schwarz, const std::vector<int>& grid_sizes, const std::string& filename);
 };
 
 #endif

@@ -1,6 +1,6 @@
 CXX = mpicxx
 
-CXXFLAGS = -O3 -std=c++20 -fopenmp -IInclude
+CXXFLAGS = -O3 -std=c++20 -fopenmp -IInclude -I/usr/include/eigen3
 
 SRC = $(wildcard Src/*.cpp)
 

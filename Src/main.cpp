@@ -101,6 +101,36 @@ int main(int argc, char** argv){
 
     }
 
+    if(rank == 0){
+
+        IO::save_data(Parallel_timings, Serial_timings, grid_sizes, "timings.dat");
+        IO::save_data(Parallel_l2_errors, Serial_l2_errors, grid_sizes, "l2_errors.dat");
+        
+        int status_1 =system(
+            "gnuplot -persist -e \""
+            "set title 'Timings Results';"
+            "set ylabel 'Time [s]';"
+            "set xlabel 'Number of Grid Points n';"
+            "set grid;"
+            "set key left top;"
+            "plot 'Test/data/timings.dat' u 1:2 w lp title 'Parallel',"
+            "     'Test/data/timings.dat' u 1:3 w lp title 'Serial'"
+            "\""
+        );
+
+        int status_2 = system(
+            "gnuplot -persist -e \""
+            "set title 'L2 Errors Results';"
+            "set ylabel 'Error';"
+            "set xlabel 'Number of Grid Points n';"
+            "set grid;"
+            "plot 'Test/data/l2_errors.dat' u 1:2 w lp title 'Parallel',"
+            "     'Test/data/l2_errors.dat' u 1:3 w lp title 'Serial'"
+            "\""
+        );
+
+    }
+
     MPI_Finalize();
 
     return 0;

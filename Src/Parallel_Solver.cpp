@@ -11,17 +11,71 @@
  */
 void Parallel_Solver::initialize(Grid& grid, std::function<double(double, double)> f){
 
+    #pragma omp parallel for
+
+        for(int i = 1; i <= grid.local_rows; ++i){
+
+            for(int j = 0; j < grid.ny; ++j){
+
+                double x_coord = grid.x(j);
+                double y_coord = grid.y(i);
+
+                grid.rhs[grid.idx(i,j)] = f(x_coord, y_coord);
+            }
+        }
+}
+
+/**
+ * @brief Function to apply boundary conditions to the grid values.
+ * @param grid The local grid structure containing the solution vectors and grid parameters.
+ * @param BC_func A function that computes the boundary condition value at given coordinates 
+ */
+void Parallel_Solver::apply_BC(Grid& grid, std::function<double(double, double)> BC_func){
+
+    #pragma omp parallel for
+
     for(int i = 1; i <= grid.local_rows; ++i){
+
+        double x_coord = grid.x(0);
+        double y_coord = grid.y(i);
+
+        grid.u_old[grid.idx(i,0)] = BC_func(x_coord, y_coord);
+        grid.u_old[grid.idx(i, grid.ny - 1)] = BC_func(grid.x(grid.ny - 1), y_coord);
+        grid.u_new[grid.idx(i,0)] = BC_func(x_coord, y_coord);
+        grid.u_new[grid.idx(i, grid.ny - 1)] = BC_func(grid.x(grid.ny - 1), y_coord);
+
+    }
+
+    const bool is_first = (grid.start_row == 0);
+    const bool is_last = (grid.start_row + grid.local_rows == grid.global_n);
+
+    if(is_first){
+
+        #pragma omp parallel for
 
         for(int j = 0; j < grid.ny; ++j){
 
             double x_coord = grid.x(j);
-            double y_coord = grid.y(i);
 
-            grid.rhs[grid.idx(i,j)] = f(x_coord, y_coord);
+            grid.u_old[grid.idx(1,j)] = BC_func(x_coord, 0.0);
+            grid.u_new[grid.idx(1,j)] = BC_func(x_coord, 0.0);
+        }
+    }
+
+    if(is_last){
+
+        #pragma omp parallel for
+
+        for(int j = 0; j < grid.ny; ++j){
+
+            double x_coord = grid.x(j);
+
+            grid.u_old[grid.idx(grid.local_rows, j)] = BC_func(x_coord, 1.0);
+            grid.u_new[grid.idx(grid.local_rows, j)] = BC_func(x_coord, 1.0);
         }
     }
 }
+
 
 /**
  * @brief Performs one iteration of the Jacobi method to update the grid values.
@@ -188,12 +242,16 @@ void Parallel_Solver::exchange_ghost_rows(Grid& grid, int rank, int size){
  * @param l2_error Reference to store the computed L2 error after convergence.
  * @param forcing_term A function that computes the forcing term (right-hand side) at given coordinates (x, y).
  * @param exact_solution A function that computes the exact solution at given coordinates (x, y) for error analysis.
+ * @param BC_func A function that computes the boundary condition value at given coordinates
  */
 void Parallel_Solver::Solve_Parallel(Grid &grid, int rank, int size, double tol, int max_iters, double &l2_error,
                 std::function<double(double, double)> forcing_term,
-                std::function<double(double, double)> exact_solution){
+                std::function<double(double, double)> exact_solution,
+                std::function<double(double, double)> BC_func){
 
     Parallel_Solver::initialize(grid, forcing_term);
+
+    Parallel_Solver::apply_BC(grid, BC_func);
 
     bool converged = false;
     int iter = 0;
@@ -203,6 +261,8 @@ void Parallel_Solver::Solve_Parallel(Grid &grid, int rank, int size, double tol,
         Parallel_Solver::exchange_ghost_rows(grid, rank, size);
 
         Parallel_Solver::jacobi_step(grid);
+
+        Parallel_Solver::apply_BC(grid, BC_func);
 
         double local_error = Parallel_Solver::compute_local_error(grid);
 

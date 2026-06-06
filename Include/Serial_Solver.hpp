@@ -16,6 +16,13 @@ class Serial_Solver{
     static void initialize(Grid& grid, std::function<double(double, double)> f);
 
     /**
+     * @brief Function to apply boundary conditions to the grid values.
+     * @param grid The grid structure containing the solution vectors and grid parameters.
+     * @param BC_func A function that computes the boundary condition value at given coordinates
+     */
+    static void apply_BC(Grid& grid, std::function<double(double, double)> BC_func);
+
+    /**
      * @brief Performs one iteration of the Jacobi method to update the grid values.
      */
     static void jacobi_step(Grid& grid);
@@ -43,10 +50,12 @@ class Serial_Solver{
      * @param l2_error Reference to store the computed L2 error after convergence.
      * @param forcing_term A function that computes the forcing term (right-hand side) at given coordinates (x, y).
      * @param exact_solution A function that computes the exact solution at given coordinates (x, y) for error analysis.
+     * @param BC_func A function that computes the boundary condition value at given coordinates
      */
     static void Solve_Serial(Grid &grid, double tol, int max_iters, double &l2_error,
                 std::function<double(double, double)> forcing_term,
-                std::function<double(double, double)> exact_solution);
+                std::function<double(double, double)> exact_solution,
+                std::function<double(double, double)> BC_func);
 
 };
 

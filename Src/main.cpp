@@ -29,8 +29,12 @@ int main(int argc, char** argv){
                 std::sin(2.0 * M_PI * y);
     };
 
+    auto BC_func = [](double x, double y){
+        return 0.0;   /// < Homogeneous Dirichlet boundary conditions
+    };
+
     std::vector<int> grid_sizes = {16, 32, 64, 128, 256};
-    int max_iters = 50000;
+    int max_iters = 200000;
     double tol = 1e-9;
 
     const char* env_threads = std::getenv("OMP_NUM_THREADS");
@@ -60,7 +64,7 @@ int main(int argc, char** argv){
 
         double start_time = MPI_Wtime();
 
-        Parallel_Solver::Solve_Parallel(Parallel_grid, rank, size, tol, max_iters, Parallel_l2_error, forcing_term, exact_solution);
+        Parallel_Solver::Solve_Parallel(Parallel_grid, rank, size, tol, max_iters, Parallel_l2_error, forcing_term, exact_solution, BC_func);
 
         double end_time = MPI_Wtime();
         double Parallel_time = end_time - start_time;
@@ -84,7 +88,7 @@ int main(int argc, char** argv){
 
             double Serial_start_time = MPI_Wtime();
 
-            Serial_Solver::Solve_Serial(Serial_grid, tol, max_iters, Serial_l2_error, forcing_term, exact_solution);
+            Serial_Solver::Solve_Serial(Serial_grid, tol, max_iters, Serial_l2_error, forcing_term, exact_solution, BC_func);
 
             double Serial_end_time = MPI_Wtime();
             double Serial_time = Serial_end_time - Serial_start_time;
@@ -106,29 +110,32 @@ int main(int argc, char** argv){
 
         IO::save_data(Parallel_timings, Serial_timings, grid_sizes, "timings.dat");
         IO::save_data(Parallel_l2_errors, Serial_l2_errors, grid_sizes, "l2_errors.dat");
-        
-        int status_1 =system(
-            "gnuplot -persist -e \""
-            "set title 'Timings Results';"
-            "set ylabel 'Time [s]';"
-            "set xlabel 'Number of Grid Points n';"
-            "set grid;"
-            "set key left top;"
-            "plot 'Test/data/timings.dat' u 1:2 w lp title 'Parallel',"
-            "     'Test/data/timings.dat' u 1:3 w lp title 'Serial'"
-            "\""
-        );
 
-        int status_2 = system(
-            "gnuplot -persist -e \""
-            "set title 'L2 Errors Results';"
-            "set ylabel 'Error';"
-            "set xlabel 'Number of Grid Points n';"
-            "set grid;"
-            "plot 'Test/data/l2_errors.dat' u 1:2 w lp title 'Parallel',"
-            "     'Test/data/l2_errors.dat' u 1:3 w lp title 'Serial'"
-            "\""
-        );
+        std::string cmd_1 =
+        "gnuplot -persist -e \""
+        "set title 'Timings Results ( Processes = " + std::to_string(size) + ")';"
+        "set ylabel 'Time [s]';"
+        "set xlabel 'Number of Grid Points n';"
+        "set grid;"
+        "set key left top;"
+        "plot 'Test/data/timings.dat' u 1:2 w lp title 'Parallel',"
+        "     'Test/data/timings.dat' u 1:3 w lp title 'Serial'"
+        "\"";
+
+        std::string cmd_2 =
+        "gnuplot -persist -e \""
+        "set title 'L2 Errors Results ( Processes = " + std::to_string(size) + ")';"
+        "set ylabel 'Error';"
+        "set xlabel 'Number of Grid Points n';"
+        "set grid;"
+        "plot 'Test/data/l2_errors.dat' u 1:2 w lp title 'Parallel',"
+        "     'Test/data/l2_errors.dat' u 1:3 w lp title 'Serial'"
+        "\"";
+
+        
+        int status_1 =system(cmd_1.c_str());
+
+        int status_2 = system(cmd_2.c_str());
 
     }
 

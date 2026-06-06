@@ -24,6 +24,36 @@ void Serial_Solver::initialize(Grid& grid, std::function<double(double, double)>
 }
 
 /**
+ * @brief Function to apply boundary conditions to the grid values.
+ * @param grid The grid structure containing the solution vectors and grid parameters.
+ * @param BC_func A function that computes the boundary condition value at given coordinates
+ */
+void Serial_Solver::apply_BC(Grid& grid, std::function<double(double, double)> BC_func){
+
+    for(int i = 0; i < grid.global_n - 1; ++i){
+
+        double y_coord = i * grid.h;
+
+        grid.u_old[grid.idx(i,0)] = BC_func(0.0, y_coord);
+        grid.u_old[grid.idx(i, grid.ny - 1)] = BC_func(grid.x(grid.ny - 1), y_coord);
+        grid.u_new[grid.idx(i,0)] = BC_func(0.0, y_coord);
+        grid.u_new[grid.idx(i, grid.ny - 1)] = BC_func(grid.x(grid.ny - 1), y_coord);
+
+    }
+
+    for(int j = 0; j < grid.ny; ++j){
+
+        double x_coord = grid.x(j);
+        double y_coord = grid.y(0);
+
+        grid.u_old[grid.idx(0,j)] = BC_func(x_coord, y_coord);
+        grid.u_old[grid.idx(grid.global_n - 1, j)] = BC_func(x_coord, grid.y(grid.global_n - 1));
+        grid.u_new[grid.idx(0,j)] = BC_func(x_coord, y_coord);
+        grid.u_new[grid.idx(grid.global_n - 1, j)] = BC_func(x_coord, grid.y(grid.global_n - 1));
+    }
+}
+
+/**
  * @brief Performs one iteration of the Jacobi method to update the grid values.
  */
 void Serial_Solver::jacobi_step(Grid& grid){
@@ -101,12 +131,16 @@ double Serial_Solver::compute_l2_error(const Grid& grid, const std::vector<doubl
  * @param l2_error Reference to store the computed L2 error after convergence.
  * @param forcing_term A function that computes the forcing term (right-hand side) at given coordinates (x, y).
  * @param exact_solution A function that computes the exact solution at given coordinates (x, y) for error analysis.
+ * @param BC_func A function that computes the boundary condition value at given coordinates
  */
 void Serial_Solver::Solve_Serial(Grid &grid, double tol, int max_iters, double &l2_error,
             std::function<double(double, double)> forcing_term,
-            std::function<double(double, double)> exact_solution){
+            std::function<double(double, double)> exact_solution,
+            std::function<double(double, double)> BC_func){
 
     Serial_Solver::initialize(grid, forcing_term);
+
+    Serial_Solver::apply_BC(grid, BC_func);
 
     bool converged = false;
     int iter = 0;
@@ -114,6 +148,8 @@ void Serial_Solver::Solve_Serial(Grid &grid, double tol, int max_iters, double &
     while(!converged && iter < max_iters){
 
         Serial_Solver::jacobi_step(grid);
+
+        Serial_Solver::apply_BC(grid, BC_func);
 
         double error = Serial_Solver::compute_error(grid);
 

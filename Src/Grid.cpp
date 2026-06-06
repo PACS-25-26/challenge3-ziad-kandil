@@ -23,9 +23,9 @@ Grid::Grid(int global_n, int local_rows, int start_row):
         h = 1.0 / (global_n - 1);   /// < Grid spacing
         int total_size = nx * ny;   /// < Total size of the local grid including ghost cells
 
-        u_old.resize(total_size, 0.0); 
-        u_new.resize(total_size, 0.0);
-        rhs.resize(total_size, 0.0);
+        u_old.resize(total_size, 1.0); 
+        u_new.resize(total_size, 1.0);
+        rhs.resize(total_size, 1.0);
     }
 
 /**
